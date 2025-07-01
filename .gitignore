@@ -1,1 +1,17 @@
+##File System ignores 
+#OSX specific files
 **/.DS_Store
+#Windows specific files
+**/Thumbs.db
+**/Desktop.ini
+#Linux specific files
+
+##Extra security ignores.
+**/ssh_keys
+**/id_rsa*
+
+#Terraform 
+**/terraform.tfstate*
+**/terraform.tfstate.backup
+**/.terraform 
+**/*.tfPlan

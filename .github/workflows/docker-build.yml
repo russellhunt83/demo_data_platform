@@ -3,21 +3,31 @@ name: Build and Push Docker Image to ECR
 on:
   workflow_dispatch:
     inputs:
-      ecr_repository:
-        description: 'ECR repository name'
-        default: 'ECR Repo Name'
+      deploy_repository:
+        description: 'The ECS to build & deploy'
         required: true
+        type: choice
+        options:
+        - 'SFTP'
+        - 'MSSQL'
+      project_name:
+        description: 'Used to prefix the ECR repository name. If left blank, the ECR will be deployed as the ECS build and deploy choice.  '
+        required: false
         type: string
       image_tag:
-        description: 'Docker image tag'
-        required: true
+        description: 'ECR image tag. If left blank, defaults to the deployment branch.'
+        required: false
         default: 'latest'
+        type: string
+      build_args:
+        description: 'Docker build arguments (format: ARG1=val1 ARG2=val2)'
+        required: false
+        default: 'USERNAME=sftpuser UPLOAD_PATH=upload'
         type: string
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-latest # In a secure envrionment, you should use self-hosted runners with restricted access.
     steps:
       - name: Check out code
         uses: actions/checkout@v2
@@ -29,6 +39,40 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Set image tag (use branch name if blank)
+        id: set-tag
+        run: |
+          if [ -z "${{ github.event.inputs.image_tag }}" ]; then
+            echo "IMAGE_TAG=${GITHUB_REF##*/}" >> $GITHUB_ENV
+          else
+            echo "IMAGE_TAG=${{ github.event.inputs.image_tag }}" >> $GITHUB_ENV
+          fi
+
+      - name: Set ECR repository name
+        id: set-ecr-repo
+        run: |
+          DEPLOY_REPO=$(echo "${{ github.event.inputs.deploy_repository }}" | tr '[:upper:]' '[:lower:]')
+          if [ -z "${{ github.event.inputs.project_name }}" ]; then
+            ECR_REPO="$DEPLOY_REPO"
+          else
+            ECR_REPO="${{ github.event.inputs.project_name }}_${DEPLOY_REPO}"
+          fi
+          echo "ECR_REPOSITORY=$ECR_REPO" >> $GITHUB_ENV
+
+      - name: Check if ECR repository exists and create with Terraform if not
+        id: ecr-terraform
+        run: |
+          ECR_REPO="${{ env.ECR_REPOSITORY }}"
+          if ! aws ecr describe-repositories --repository-names "$ECR_REPO" > /dev/null 2>&1; then
+            echo "ECR repository $ECR_REPO does not exist. Running Terraform to create it."
+            cd ../../infra/ecr
+            terraform init -input=false
+            terraform apply -auto-approve -input=false -var="ecr_repo_name=$ECR_REPO"
+            cd -
+          else
+            echo "ECR repository $ECR_REPO already exists. Skipping Terraform."
+          fi
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
@@ -39,9 +83,31 @@ jobs:
       - name: Build, tag, and push image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ github.event.inputs.ecr_repository }}
-          IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
         run: |
-          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          DEPLOY_REPO=$(echo "${{ github.event.inputs.deploy_repository }}" | tr '[:upper:]' '[:lower:]')
+          cd apps/$DEPLOY_REPO
+          if [ -n "${{ github.event.inputs.build_args }}" ]; then
+            BUILD_ARGS=$(for arg in ${{ github.event.inputs.build_args }}; do echo -n "--build-arg $arg "; done)
+          else
+            BUILD_ARGS=""
+          fi
+          # Generate SSH key for the docker image
+          KEY_NAME=${1:-id_rsa}
+          KEY_DIR="$(dirname "$0")/ssh_keys"
+
+          mkdir -p "$KEY_DIR"
+          # Force overwrite existing key with -f
+          ssh-keygen -t rsa -b 4096 -f "$KEY_DIR/$KEY_NAME" -N "" -q <<< y
+
+          # Upload private key to AWS SSM Parameter Store as SecureString
+          aws ssm put-parameter \
+            --name "/sftp/$IMAGE_TAG/$KEY_NAME" \
+            --value "$(cat "$KEY_DIR/$KEY_NAME")" \
+            --type "SecureString" \
+            --overwrite
+
+          docker build $BUILD_ARGS -t $ECR_REPOSITORY:$IMAGE_TAG .
           docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG

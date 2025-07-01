@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  sftp:
+    build: .
+    image: demo-sftp:latest
+    container_name: demo-sftp
+    ports:
+      - "2222:22"
+    volumes:
+      - ./data:/home/sftpuser/upload
+      - ./ssh_keys/id_rsa.pub:/home/sftpuser/.ssh/keys/id_rsa.pub:ro
+    command: 'sftpuser::::upload'
+    restart: unless-stopped
