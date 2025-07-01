@@ -1,0 +1,57 @@
+name: Data Platform Deployment git 
+
+on:
+  workflow_dispatch:
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      tfplan-path: ${{ steps.plan.outputs.tfplan-path }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.12.2
+
+      - name: Initialize Terraform
+        run: terraform init infra
+
+      - name: Plan Terraform deployment
+        id: plan
+        run: terraform plan -out=tfplan infra
+
+      - name: Upload plan file
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: tfplan
+
+  apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      # Set up environment protection rules in GitHub for manual approval
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.12.2
+
+      - name: Download plan file
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+
+      - name: Initialize Terraform
+        run: terraform init infra
+
+      - name: Apply Terraform changes
+        run: terraform apply -auto-approve tfplan
