@@ -20,7 +20,14 @@ Mock systems are useful in development because of their low cost, they're low ef
 
 This project has been developed and tested using [LocalStack](https://www.localstack.cloud/) to save costs in AWS whilst I built this and [Terraform](https://registry.terraform.io/providers/hashicorp/aws/latest/docs) for deployment. 
 
-> ℹ If this is going to be run for a demonstration you must   change the terraform.tf files s3 backend configuration in `ecs-sftp`, and `ecs-msql` in the `/apps` directory to your own S3 bucket in S3 backend. I am using S3 backend my GitHub actions are running on ubuntu-latest, and the state files might not be fully maintained. It also reduces the size of files I have to store in Git.
+> ℹ If this is going to be run for a demonstration you must run
+```
+cd ./init
+chmod +x provision.sh
+./provison.sh
+git commit -am 'Updating git init'
+```
+  change the terraform.tf files s3 backend configuration in `ecs-sftp`, and `ecs-msql` in the `/apps` directory to your own S3 bucket in S3 backend. I am using S3 backend my GitHub actions are running on ubuntu-latest, and the state files might not be fully maintained. It also reduces the size of files I have to store in Git.
 ---
 **Created**:<br>
 2025-06-25<br>

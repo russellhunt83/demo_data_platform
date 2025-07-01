@@ -1,6 +1,6 @@
 terraform {
   backend "s3" {
-    bucket         = "demo-data-platform-terraform-state"
+    bucket = "demo-data-platform-terraform-state"
     key            = "ecs-sftp/terraform.tfstate"
     region         = "eu-west-1"
     #dynamodb_table = "my-lock-table"
