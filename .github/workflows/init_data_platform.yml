@@ -1,0 +1,44 @@
+name: Init Data Platform - Networking
+
+on:
+  workflow_dispatch:
+      
+jobs:
+  init_data_platform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.2
+
+      - name: Terraform Init
+        working-directory: ./infra/networking
+        run: terraform init -input=false
+
+      - name: Set Terraform workspace (user input or current branch)
+        id: set_workspace
+        working-directory: ./infra/networking
+        run: |
+          WORKSPACE=$(echo "${GITHUB_REF##*/}" | tr '/' '-')
+          echo "Using workspace: $WORKSPACE"
+          terraform workspace select -or-create "$WORKSPACE"
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+
+      - name: Terraform Plan
+        working-directory: ./infra/networking
+        run: terraform plan -input=tfVars/$(terraform workspace show).tfvars -out=plan.tfplan
+
+      - name: Terraform Apply
+        working-directory: ./infra/networking
+        run: terraform apply plan.tfplan
