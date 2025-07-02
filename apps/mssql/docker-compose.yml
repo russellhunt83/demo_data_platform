@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  mssql:
+    build: .
+    container_name: mssql
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Y0rW3lc0m3ToS33Th15?
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+    restart: unless-stopped
+    platform: linux/amd64
+    
+volumes:
+  mssql_data:

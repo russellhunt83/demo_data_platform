@@ -1,24 +1,20 @@
 #!/bin/bash
 
-KEY_NAME=${1:-id_rsa}
-KEY_DIR="$(dirname "$0")/ssh_keys"
+# Prompt for SA_PASSWORD if not set
+if [ -z "$SA_PASSWORD" ]; then
+    read -s -p "Enter SA_PASSWORD for MSSQL: " SA_PASSWORD
+    echo
+fi
 
-mkdir -p "$KEY_DIR"
-# Force overwrite existing key with -f
-ssh-keygen -t rsa -b 4096 -f "$KEY_DIR/$KEY_NAME" -N "" -q <<< y
-
-echo "SSH key pair generated at $KEY_DIR/$KEY_NAME and $KEY_DIR/$KEY_NAME.pub"
-
-DOCKER_CONTAINER=demo-sftp
-SERVICE_NAME=SFTP
-PORT_EXPOSE=2222
-PORT_EXPOSED=22
-
+DOCKER_CONTAINER=demo-mssql
+SERVICE_NAME=MSSQL
+PORT_EXPOSE=1433
+PORT_EXPOSED=1433
 echo "Stopping any existing ${SERVICE_NAME} containers..."
 docker compose down
 
 echo "Attempting to start ${SERVICE_NAME} container..."
-docker build -t ${DOCKER_CONTAINER} --build-arg USERNAME=sftpuser --build-arg UPLOAD_PATH=upload .
+docker build -t ${DOCKER_CONTAINER} --build-arg SA_PASSWORD_ARG=${SA_PASSWORD} .
 
 if docker container ls -a --filter "name=${DOCKER_CONTAINER}" --format '{{.Names}}'; then
     docker container stop ${DOCKER_CONTAINER}

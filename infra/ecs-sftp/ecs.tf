@@ -1,9 +1,9 @@
 resource "aws_ecs_cluster" "sftp_cluster" {
-  name = "sftp-cluster"
+  name = "${var.environment_name}-sftp-cluster"
 }
 
 resource "aws_ecs_service" "sftp_service" {
-  name            = "sftp-service"
+  name            = "${var.environment_name}-sftp-service"
   cluster         = aws_ecs_cluster.sftp_cluster.id
   task_definition = aws_ecs_task_definition.sftp_task.arn
   desired_count   = 1
@@ -13,11 +13,12 @@ resource "aws_ecs_service" "sftp_service" {
     security_groups  = [aws_security_group.sftp_sg.id]
     assign_public_ip = true
   }
+  
   depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_role]
 }
 
 resource "aws_ecs_task_definition" "sftp_task" {
-  family                   = "sftp-task"
+  family                   = "${var.environment_name}-sftp-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
@@ -32,6 +33,16 @@ resource "aws_ecs_task_definition" "sftp_task" {
         hostPort      = 22
         protocol      = "tcp"
       }]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/${var.environment_name}-sftp"
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
     }
+    
   ])
+  
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Script to create an S3 bucket and update all terraform.tf files in infra with the bucket name
 # chmod +x init/provision.sh
-BUCKET=demo-data-platform-terraform-state
+BUCKET=$1
 echo "Creating S3 bucket: ${BUCKET}..."
 aws s3api create-bucket --bucket $BUCKET --region eu-west-1 --create-bucket-configuration LocationConstraint=eu-west-1
 

@@ -1,9 +1,8 @@
 aws_account_id           = "736376237652"
 aws_region               = "eu-west-1"
 environment_name         = "dev"
+mssql_image_repository   = "demo-data-platform"
+mssql_image_tag          = "dev"
 owner                    = "russellhunt"
 project_name             = "DemoDataPlatform"
-sftp_image_repository    = "demo-data-platform"
-sftp_image_tag           = "dev"
 vpc_id                   = "vpc-0df76a0975820e3b6"
-
