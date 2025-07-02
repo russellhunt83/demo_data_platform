@@ -67,8 +67,10 @@ The GitHub Repository is structured for trunk development. Since this is a small
 `/apps` where all applications are stored, including Docker file defintions. 
 
 `/docs` detailed documentation on each component referred to in this README. 
+**Under Development**
 
 `/codebase` Operational ETL code. 
+**Under Development**
 
 This Workspace contains: - 
 
@@ -87,13 +89,7 @@ These ECS containers are hosted Docker images on ECR (Elastic Container Registry
 
  This will create an SSH key in you `./apps/sftp/ssh_keys`. It copies the public file to the SSH Container and listens on localhost port 2222. You can now SSH to the localhost SFTP Server on port 2222 using the ID RSA. 
  
- - __Swagger IO__<br>
-The Swagger Documentation for the demo API Gateway is stored in `/docs`. This can be viewed using the swagger docker instance `/apps/swagger.io/dockerfile`. 
-```
-cd /apps/swagger.io
-docker build . -t swagger
-docker run --rm -d swagger -v 8090:80
-``` 
+
 
 - __SQL Server__<br>
 Emulates MS SQL Server running on linux to demonstrate data collection. A random dataset is created to allow for example data models to be built. 
@@ -105,19 +101,16 @@ You can also this image locally
  ```
 
 ###  Data Platform Deployment
-In `/apps/dataplatform` there are a set of Terraform Scripts that will deploy:
+In `/infra/datalake` there are a set of Terraform Scripts that will deploy:
 
- - __SSM__ <br>
- The Parameter Store functionality within Simple Service Management (SSM) to store secured credentials and configurations. 
+1. AWS Lakeformation
+2. Database - dev_demodataplatform_inbound
+3. Table  - Person table mounted to S3 inbound/person
 
- - __SFTP Collection Lambda__ <br>
- batch data collection from SFTP to S3 on an event bridge daily schedule
+It Demonstrates the use of
 
- - __Dynamo DB Lambda__ <br>
- Collects and stores data attributes in DynamoDB
- 
  - __IAM Roles__ <br>
- I have created Amazon Identity and Access Management (IAM) roles and policies to demonstrate how different teams could access the mart prefix of the S3 bucket. These IAM Roles give IAM Users from hypothetical teams access to their specific prefixes. e.g. Finance get access to the /mart.finance/reports/* prefix of the S3 bucket, and so on. 
+ I have created Amazon Identity and Access Management (IAM) roles for Lake Formation to be able to access the S3 Bucket. 
 
  - __KMS Encryption__ 
 I am demonstrating encrypting data collected and ecrypted at rest in S3 using AWS Key Management Services
@@ -130,16 +123,6 @@ I am demonstrating encrypting data collected and ecrypted at rest in S3 using AW
   Semi transformed wide data sets in parquet format
    - Mart <br>
    Business data presented and available in 
-
-- __Lambda Integrated API Gateway__<br>
-Acts as callback for external live streaming data from external third party providers. The provided Swagger documentation in `/docs` provides examples of how to post payloads to this endpoint.
-
-- __SQS__ <br>
-The Real-time API Gateway pushes batches of messages to SQS for cold path systems delivery to the `/inbound` prefix of S3 
-
-- __SQS Subscriber Lambda__<br>
-Processes batched real-time data into S3 batches for analysis.
-
 ---
 
 ## Operational ETL Code
